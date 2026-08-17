@@ -6,58 +6,38 @@ import os
 app = Flask(__name__)
 
 # ============================================================
-# LOAD MODEL
+# LOAD MACHINE LEARNING MODEL
 # ============================================================
 
-MODEL_PATH = "Model.pkl"
+MODEL_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "Model.pkl"
+)
 
 try:
     with open(MODEL_PATH, "rb") as file:
         model = pickle.load(file)
 
+    MODEL_LOADED = True
     print("Model loaded successfully!")
 
 except Exception as e:
     model = None
+    MODEL_LOADED = False
     print("Error loading model:", e)
 
 
 # ============================================================
-# MODEL INFORMATION
+# MODEL FEATURES
 # ============================================================
-
-if model is not None:
-    try:
-        FEATURE_COUNT = model.n_features_in_
-    except:
-        try:
-            FEATURE_COUNT = model[-1].n_features_in_
-        except:
-            FEATURE_COUNT = 4
-else:
-    FEATURE_COUNT = 4
-
-
-# ============================================================
-# CHANGE THESE FEATURE NAMES
-# ============================================================
-# IMPORTANT:
-# Replace these with the exact columns used while training
-# your model.
 
 FEATURE_NAMES = [
-    "Feature 1",
-    "Feature 2",
-    "Feature 3",
-    "Feature 4"
+    "Age",
+    "Gender",
+    "Region",
+    "Occupation",
+    "Income"
 ]
-
-# Automatically create names if model needs more features
-if len(FEATURE_NAMES) != FEATURE_COUNT:
-    FEATURE_NAMES = [
-        f"Feature {i + 1}"
-        for i in range(FEATURE_COUNT)
-    ]
 
 
 # ============================================================
@@ -65,430 +45,995 @@ if len(FEATURE_NAMES) != FEATURE_COUNT:
 # ============================================================
 
 HTML = """
+
 <!DOCTYPE html>
+
 <html lang="en">
 
 <head>
 
-    <meta charset="UTF-8">
+<meta charset="UTF-8">
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
 
-    <title>AI Prediction System</title>
+<title>Laptop Purchase Predictor</title>
 
-    <style>
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: Arial, Helvetica, sans-serif;
-        }
+<style>
 
-        body {
-            min-height: 100vh;
+/* =========================================================
+   GLOBAL
+========================================================= */
 
-            background:
-                radial-gradient(circle at top left,
-                    #243b55,
-                    transparent 35%),
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+}
 
-                radial-gradient(circle at bottom right,
-                    #141e30,
-                    transparent 40%),
 
-                #0b1220;
+body {
 
-            color: white;
+    min-height: 100vh;
 
-            display: flex;
-            justify-content: center;
-            align-items: center;
+    background:
+        radial-gradient(
+            circle at 10% 10%,
+            rgba(59,130,246,0.25),
+            transparent 30%
+        ),
 
-            padding: 30px;
-        }
+        radial-gradient(
+            circle at 90% 90%,
+            rgba(139,92,246,0.25),
+            transparent 30%
+        ),
 
-        .container {
-            width: 100%;
-            max-width: 1000px;
+        linear-gradient(
+            135deg,
+            #07111f,
+            #111827,
+            #0f172a
+        );
 
-            background: rgba(255,255,255,0.08);
+    color: white;
 
-            border: 1px solid rgba(255,255,255,0.15);
+    display: flex;
 
-            backdrop-filter: blur(20px);
+    justify-content: center;
 
-            border-radius: 25px;
+    align-items: center;
 
-            padding: 35px;
+    padding: 30px 15px;
 
-            box-shadow:
-                0 25px 60px rgba(0,0,0,0.45);
-        }
+}
 
-        .header {
-            text-align: center;
 
-            margin-bottom: 35px;
-        }
+/* =========================================================
+   MAIN CONTAINER
+========================================================= */
 
-        .logo {
-            width: 65px;
-            height: 65px;
+.container {
 
-            margin: auto;
-            margin-bottom: 15px;
+    width: 100%;
 
-            border-radius: 18px;
+    max-width: 1050px;
 
-            display: flex;
-            justify-content: center;
-            align-items: center;
+    background:
+        rgba(255,255,255,0.075);
 
-            font-size: 30px;
+    border:
+        1px solid
+        rgba(255,255,255,0.12);
 
-            background: linear-gradient(
-                135deg,
-                #667eea,
-                #764ba2
-            );
+    backdrop-filter:
+        blur(22px);
 
-            box-shadow:
-                0 10px 30px rgba(118,75,162,0.5);
-        }
+    -webkit-backdrop-filter:
+        blur(22px);
 
-        h1 {
-            font-size: 32px;
-            margin-bottom: 10px;
-        }
+    border-radius: 28px;
 
-        .subtitle {
-            color: #b8c1d9;
-            font-size: 15px;
-        }
+    padding: 42px;
 
-        .model-status {
-            display: inline-block;
+    box-shadow:
+        0 30px 80px
+        rgba(0,0,0,0.45);
 
-            margin-top: 15px;
+}
 
-            padding: 7px 15px;
 
-            border-radius: 30px;
+/* =========================================================
+   HEADER
+========================================================= */
 
-            background: rgba(46, 204, 113, 0.15);
+.header {
 
-            color: #5cff9d;
+    text-align: center;
 
-            font-size: 13px;
-        }
+    margin-bottom: 35px;
 
-        .form-grid {
+}
 
-            display: grid;
 
-            grid-template-columns:
-                repeat(2, 1fr);
+.logo {
 
-            gap: 20px;
-        }
+    width: 75px;
 
-        .input-group {
-            display: flex;
-            flex-direction: column;
-        }
+    height: 75px;
 
-        label {
-            margin-bottom: 8px;
+    margin:
+        0 auto 18px;
 
-            color: #d9def0;
+    display: flex;
 
-            font-size: 14px;
+    align-items: center;
 
-            font-weight: 600;
-        }
+    justify-content: center;
 
-        input {
+    border-radius: 21px;
 
-            width: 100%;
+    background:
+        linear-gradient(
+            135deg,
+            #2563eb,
+            #7c3aed
+        );
 
-            padding: 14px 16px;
+    font-size: 32px;
 
-            border-radius: 12px;
+    box-shadow:
+        0 15px 40px
+        rgba(37,99,235,0.40);
 
-            border: 1px solid
-                    rgba(255,255,255,0.15);
+}
 
-            background: rgba(255,255,255,0.07);
 
-            color: white;
+h1 {
 
-            outline: none;
+    font-size: 34px;
 
-            font-size: 15px;
+    font-weight: 800;
 
-            transition: 0.3s;
-        }
+    margin-bottom: 12px;
 
-        input:focus {
+}
 
-            border-color: #8b7cf6;
 
-            background:
-                rgba(255,255,255,0.12);
+.subtitle {
 
-            box-shadow:
-                0 0 0 3px
-                rgba(139,124,246,0.15);
-        }
+    max-width: 700px;
 
-        input::placeholder {
-            color: #7f8aa8;
-        }
+    margin: auto;
 
-        .predict-btn {
+    color: #aeb8cc;
 
-            width: 100%;
+    line-height: 1.6;
 
-            margin-top: 28px;
+    font-size: 15px;
 
-            padding: 16px;
+}
 
-            border: none;
 
-            border-radius: 14px;
+/* =========================================================
+   MODEL STATUS
+========================================================= */
 
-            cursor: pointer;
+.status {
 
-            color: white;
+    display: inline-flex;
 
-            font-size: 16px;
+    align-items: center;
 
-            font-weight: bold;
+    gap: 8px;
 
-            background:
-                linear-gradient(
-                    135deg,
-                    #667eea,
-                    #764ba2
-                );
+    margin-top: 18px;
 
-            box-shadow:
-                0 12px 25px
-                rgba(102,126,234,0.3);
+    padding: 8px 17px;
 
-            transition: 0.3s;
-        }
+    border-radius: 30px;
 
-        .predict-btn:hover {
+    background:
+        rgba(34,197,94,0.10);
 
-            transform: translateY(-2px);
+    border:
+        1px solid
+        rgba(34,197,94,0.20);
 
-            box-shadow:
-                0 15px 35px
-                rgba(102,126,234,0.5);
-        }
+    color: #86efac;
 
-        .result {
+    font-size: 13px;
 
-            margin-top: 30px;
+    font-weight: 600;
 
-            padding: 25px;
+}
 
-            text-align: center;
 
-            border-radius: 18px;
+.status-dot {
 
-            background:
-                rgba(255,255,255,0.08);
+    width: 8px;
 
-            border:
-                1px solid
-                rgba(255,255,255,0.15);
-        }
+    height: 8px;
 
-        .result-title {
+    border-radius: 50%;
 
-            color: #aab3ca;
+    background: #22c55e;
 
-            font-size: 14px;
+    box-shadow:
+        0 0 12px
+        rgba(34,197,94,0.8);
 
-            margin-bottom: 10px;
-        }
+}
 
-        .prediction {
 
-            font-size: 30px;
+/* =========================================================
+   FORM
+========================================================= */
 
-            font-weight: bold;
+.form-title {
 
-            color: #ffffff;
-        }
+    font-size: 19px;
 
-        .error {
+    font-weight: 700;
 
-            margin-top: 20px;
+    color: #e5e7eb;
 
-            padding: 15px;
+    margin-bottom: 22px;
 
-            border-radius: 12px;
+}
 
-            background:
-                rgba(255,70,70,0.12);
 
-            color: #ff8f8f;
+.form-grid {
 
-            text-align: center;
-        }
+    display: grid;
 
-        .footer {
+    grid-template-columns:
+        repeat(2, 1fr);
 
-            text-align: center;
+    gap: 22px;
 
-            margin-top: 25px;
+}
 
-            color: #727c96;
 
-            font-size: 12px;
-        }
+.input-group {
 
-        @media(max-width: 700px) {
+    display: flex;
 
-            body {
-                padding: 15px;
-            }
+    flex-direction: column;
 
-            .container {
-                padding: 25px 18px;
-            }
+}
 
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
 
-            h1 {
-                font-size: 26px;
-            }
-        }
+label {
 
-    </style>
+    color: #d6dbea;
+
+    font-size: 14px;
+
+    font-weight: 600;
+
+    margin-bottom: 9px;
+
+}
+
+
+.input-help {
+
+    color: #718096;
+
+    font-size: 11px;
+
+    margin-top: 6px;
+
+}
+
+
+input,
+select {
+
+    width: 100%;
+
+    height: 50px;
+
+    padding:
+        0 15px;
+
+    border-radius: 13px;
+
+    border:
+        1px solid
+        rgba(255,255,255,0.12);
+
+    background:
+        rgba(255,255,255,0.065);
+
+    color: white;
+
+    outline: none;
+
+    font-size: 14px;
+
+    transition: 0.25s;
+
+}
+
+
+input::placeholder {
+
+    color: #69758d;
+
+}
+
+
+select option {
+
+    background: #111827;
+
+    color: white;
+
+}
+
+
+input:focus,
+select:focus {
+
+    border-color: #60a5fa;
+
+    background:
+        rgba(255,255,255,0.10);
+
+    box-shadow:
+        0 0 0 4px
+        rgba(59,130,246,0.12);
+
+}
+
+
+/* =========================================================
+   BUTTON
+========================================================= */
+
+.predict-btn {
+
+    width: 100%;
+
+    height: 56px;
+
+    margin-top: 28px;
+
+    border: none;
+
+    border-radius: 15px;
+
+    cursor: pointer;
+
+    color: white;
+
+    font-size: 16px;
+
+    font-weight: 700;
+
+    background:
+        linear-gradient(
+            135deg,
+            #2563eb,
+            #7c3aed
+        );
+
+    box-shadow:
+        0 15px 30px
+        rgba(37,99,235,0.30);
+
+    transition: 0.25s;
+
+}
+
+
+.predict-btn:hover {
+
+    transform:
+        translateY(-2px);
+
+    box-shadow:
+        0 20px 40px
+        rgba(37,99,235,0.45);
+
+}
+
+
+/* =========================================================
+   RESULT
+========================================================= */
+
+.result {
+
+    margin-top: 30px;
+
+    padding: 32px;
+
+    text-align: center;
+
+    border-radius: 20px;
+
+    background:
+        rgba(255,255,255,0.055);
+
+    border:
+        1px solid
+        rgba(255,255,255,0.10);
+
+}
+
+
+.result-label {
+
+    color: #9ca8bd;
+
+    font-size: 12px;
+
+    font-weight: 700;
+
+    letter-spacing: 1.5px;
+
+    margin-bottom: 13px;
+
+}
+
+
+.prediction {
+
+    font-size: 40px;
+
+    font-weight: 800;
+
+}
+
+
+.prediction.yes {
+
+    color: #4ade80;
+
+    text-shadow:
+        0 0 25px
+        rgba(74,222,128,0.25);
+
+}
+
+
+.prediction.no {
+
+    color: #fb7185;
+
+    text-shadow:
+        0 0 25px
+        rgba(251,113,133,0.20);
+
+}
+
+
+.result-message {
+
+    margin-top: 10px;
+
+    color: #aab4c7;
+
+    font-size: 14px;
+
+}
+
+
+/* =========================================================
+   ERROR
+========================================================= */
+
+.error {
+
+    margin-top: 25px;
+
+    padding: 16px;
+
+    border-radius: 13px;
+
+    background:
+        rgba(239,68,68,0.10);
+
+    border:
+        1px solid
+        rgba(239,68,68,0.20);
+
+    color: #fca5a5;
+
+    text-align: center;
+
+    font-size: 14px;
+
+}
+
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.footer {
+
+    margin-top: 30px;
+
+    text-align: center;
+
+    color: #667085;
+
+    font-size: 12px;
+
+}
+
+
+.footer span {
+
+    color: #60a5fa;
+
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media(max-width:700px) {
+
+    body {
+
+        padding: 15px;
+
+    }
+
+    .container {
+
+        padding:
+            28px 20px;
+
+        border-radius: 22px;
+
+    }
+
+    h1 {
+
+        font-size: 27px;
+
+    }
+
+    .form-grid {
+
+        grid-template-columns: 1fr;
+
+        gap: 18px;
+
+    }
+
+    .logo {
+
+        width: 62px;
+
+        height: 62px;
+
+        font-size: 26px;
+
+    }
+
+}
+
+</style>
 
 </head>
 
 
 <body>
 
+
 <div class="container">
 
-    <div class="header">
 
-        <div class="logo">
-            AI
-        </div>
+<!-- =====================================================
+     HEADER
+===================================================== -->
 
-        <h1>
-            AI Prediction System
-        </h1>
+<div class="header">
 
-        <p class="subtitle">
-            Enter the required values and let the
-            machine learning model generate a prediction.
-        </p>
 
-        {% if model_loaded %}
+    <div class="logo">
 
-        <div class="model-status">
-            ● Model Ready
-        </div>
-
-        {% else %}
-
-        <div class="model-status"
-             style="color:#ff8f8f;">
-            ● Model Not Loaded
-        </div>
-
-        {% endif %}
+        💻
 
     </div>
 
 
-    <form method="POST">
+    <h1>
 
-        <div class="form-grid">
+        Laptop Purchase Predictor
 
-            {% for feature in features %}
-
-            <div class="input-group">
-
-                <label>
-                    {{ feature }}
-                </label>
-
-                <input
-                    type="number"
-                    step="any"
-                    name="feature{{ loop.index0 }}"
-                    placeholder="Enter {{ feature }}"
-                    required
-                >
-
-            </div>
-
-            {% endfor %}
-
-        </div>
+    </h1>
 
 
-        <button
-            type="submit"
-            class="predict-btn">
+    <p class="subtitle">
 
-            🚀 Generate Prediction
+        Predict whether a person is likely to purchase
+        a laptop using machine learning based on
+        personal, demographic and financial information.
 
-        </button>
-
-    </form>
+    </p>
 
 
-    {% if prediction is not none %}
+    {% if model_loaded %}
 
-    <div class="result">
+    <div class="status">
 
-        <div class="result-title">
-            MODEL PREDICTION
-        </div>
+        <span class="status-dot"></span>
 
-        <div class="prediction">
-            {{ prediction }}
-        </div>
+        Model Ready
+
+    </div>
+
+    {% else %}
+
+    <div class="status"
+         style="
+            color:#fca5a5;
+            background:rgba(239,68,68,0.10);
+            border-color:rgba(239,68,68,0.20);
+         ">
+
+        <span class="status-dot"
+              style="background:#ef4444;">
+        </span>
+
+        Model Not Loaded
 
     </div>
 
     {% endif %}
 
 
-    {% if error %}
-
-    <div class="error">
-        ⚠ {{ error }}
-    </div>
-
-    {% endif %}
+</div>
 
 
-    <div class="footer">
+<!-- =====================================================
+     FORM
+===================================================== -->
 
-        Powered by Machine Learning • Flask • Render
+<div class="form-title">
+
+    Enter Customer Information
+
+</div>
+
+
+<form method="POST">
+
+
+<div class="form-grid">
+
+
+<!-- AGE -->
+
+<div class="input-group">
+
+    <label for="age">
+
+        Age
+
+    </label>
+
+    <input
+        type="number"
+        id="age"
+        name="age"
+        min="1"
+        max="100"
+        placeholder="Enter age"
+        required
+    >
+
+    <div class="input-help">
+
+        Enter age between 1 and 100
 
     </div>
 
 </div>
 
+
+<!-- GENDER -->
+
+<div class="input-group">
+
+    <label for="gender">
+
+        Gender
+
+    </label>
+
+    <select
+        id="gender"
+        name="gender"
+        required
+    >
+
+        <option value="">
+
+            Select gender
+
+        </option>
+
+        <option value="0">
+
+            Gender Category 0
+
+        </option>
+
+        <option value="1">
+
+            Gender Category 1
+
+        </option>
+
+    </select>
+
+    <div class="input-help">
+
+        Encoded value used by the ML model
+
+    </div>
+
+</div>
+
+
+<!-- REGION -->
+
+<div class="input-group">
+
+    <label for="region">
+
+        Region
+
+    </label>
+
+    <select
+        id="region"
+        name="region"
+        required
+    >
+
+        <option value="">
+
+            Select region
+
+        </option>
+
+        <option value="0">
+
+            Region Category 0
+
+        </option>
+
+        <option value="1">
+
+            Region Category 1
+
+        </option>
+
+    </select>
+
+    <div class="input-help">
+
+        Encoded value used by the ML model
+
+    </div>
+
+</div>
+
+
+<!-- OCCUPATION -->
+
+<div class="input-group">
+
+    <label for="occupation">
+
+        Occupation
+
+    </label>
+
+    <select
+        id="occupation"
+        name="occupation"
+        required
+    >
+
+        <option value="">
+
+            Select occupation
+
+        </option>
+
+        <option value="0">
+
+            Occupation Category 0
+
+        </option>
+
+        <option value="1">
+
+            Occupation Category 1
+
+        </option>
+
+        <option value="2">
+
+            Occupation Category 2
+
+        </option>
+
+        <option value="3">
+
+            Occupation Category 3
+
+        </option>
+
+    </select>
+
+    <div class="input-help">
+
+        Encoded value used by the ML model
+
+    </div>
+
+</div>
+
+
+<!-- INCOME -->
+
+<div class="input-group">
+
+    <label for="income">
+
+        Income
+
+    </label>
+
+    <input
+        type="number"
+        id="income"
+        name="income"
+        min="0"
+        step="any"
+        placeholder="Enter income"
+        required
+    >
+
+    <div class="input-help">
+
+        Enter the income value
+
+    </div>
+
+</div>
+
+
+</div>
+
+
+<!-- BUTTON -->
+
+<button
+    type="submit"
+    class="predict-btn">
+
+    🔮 Predict Laptop Purchase
+
+</button>
+
+
+</form>
+
+
+<!-- =====================================================
+     RESULT
+===================================================== -->
+
+{% if prediction is not none %}
+
+
+<div class="result">
+
+
+    <div class="result-label">
+
+        LAPTOP PURCHASE PREDICTION
+
+    </div>
+
+
+    {% if prediction == "yes" %}
+
+
+    <div class="prediction yes">
+
+        YES ✓
+
+    </div>
+
+
+    <div class="result-message">
+
+        This person is likely to purchase a laptop.
+
+    </div>
+
+
+    {% else %}
+
+
+    <div class="prediction no">
+
+        NO ✕
+
+    </div>
+
+
+    <div class="result-message">
+
+        This person is unlikely to purchase a laptop.
+
+    </div>
+
+
+    {% endif %}
+
+
+</div>
+
+
+{% endif %}
+
+
+<!-- =====================================================
+     ERROR
+===================================================== -->
+
+{% if error %}
+
+
+<div class="error">
+
+    ⚠️ {{ error }}
+
+</div>
+
+
+{% endif %}
+
+
+<!-- FOOTER -->
+
+<div class="footer">
+
+    Powered by
+    <span>Machine Learning</span>
+    • Flask • Render
+
+</div>
+
+
+</div>
+
+
 </body>
 
 </html>
+
 """
 
 
@@ -500,54 +1045,155 @@ HTML = """
 def home():
 
     prediction = None
+
     error = None
+
 
     if request.method == "POST":
 
+        if not MODEL_LOADED:
+
+            error = (
+                "Machine learning model could not be loaded."
+            )
+
+            return render_template_string(
+                HTML,
+                model_loaded=False,
+                prediction=None,
+                error=error
+            )
+
+
         try:
 
-            # Collect input values
-            values = []
+            # ------------------------------------------------
+            # GET VALUES FROM FORM
+            # ------------------------------------------------
 
-            for i in range(FEATURE_COUNT):
+            age = request.form.get("age")
 
-                value = request.form.get(
-                    f"feature{i}"
+            gender = request.form.get("gender")
+
+            region = request.form.get("region")
+
+            occupation = request.form.get("occupation")
+
+            income = request.form.get("income")
+
+
+            # ------------------------------------------------
+            # VALIDATION
+            # ------------------------------------------------
+
+            if not age:
+
+                raise ValueError(
+                    "Please enter Age."
                 )
 
-                if value is None or value == "":
-                    raise ValueError(
-                        f"Missing value for Feature {i + 1}"
-                    )
 
-                values.append(float(value))
+            if not gender:
 
-
-            # Convert to numpy array
-            input_data = np.array(values).reshape(1, -1)
+                raise ValueError(
+                    "Please select Gender."
+                )
 
 
-            # Make prediction
+            if not region:
+
+                raise ValueError(
+                    "Please select Region."
+                )
+
+
+            if not occupation:
+
+                raise ValueError(
+                    "Please select Occupation."
+                )
+
+
+            if not income:
+
+                raise ValueError(
+                    "Please enter Income."
+                )
+
+
+            # ------------------------------------------------
+            # CONVERT TO NUMERIC VALUES
+            # ------------------------------------------------
+
+            age = float(age)
+
+            gender = float(gender)
+
+            region = float(region)
+
+            occupation = float(occupation)
+
+            income = float(income)
+
+
+            # ------------------------------------------------
+            # VALIDATE AGE
+            # ------------------------------------------------
+
+            if age < 1 or age > 100:
+
+                raise ValueError(
+                    "Age must be between 1 and 100."
+                )
+
+
+            # ------------------------------------------------
+            # VALIDATE INCOME
+            # ------------------------------------------------
+
+            if income < 0:
+
+                raise ValueError(
+                    "Income cannot be negative."
+                )
+
+
+            # ------------------------------------------------
+            # CREATE INPUT ARRAY
+            # ------------------------------------------------
+
+            input_data = np.array([
+                age,
+                gender,
+                region,
+                occupation,
+                income
+            ]).reshape(1, -1)
+
+
+            # ------------------------------------------------
+            # PREDICT
+            # ------------------------------------------------
+
             prediction_result = model.predict(
                 input_data
             )[0]
 
 
-            # Format prediction
-            if isinstance(
-                prediction_result,
-                (np.integer, np.floating)
-            ):
+            prediction = str(
+                prediction_result
+            ).lower()
+
+
+            # ------------------------------------------------
+            # CHECK RESULT
+            # ------------------------------------------------
+
+            if prediction not in ["yes", "no"]:
 
                 prediction = str(
                     prediction_result
-                )
-
-            else:
-
-                prediction = str(
-                    prediction_result
-                )
+                ).lower()
 
 
         except Exception as e:
@@ -559,13 +1205,12 @@ def home():
 
         HTML,
 
-        features=FEATURE_NAMES,
+        model_loaded=MODEL_LOADED,
 
         prediction=prediction,
 
-        error=error,
+        error=error
 
-        model_loaded=model is not None
     )
 
 
@@ -574,16 +1219,20 @@ def home():
 # ============================================================
 
 @app.route("/health")
+
 def health():
 
     return {
+
         "status": "healthy",
-        "model_loaded": model is not None
+
+        "model_loaded": MODEL_LOADED
+
     }
 
 
 # ============================================================
-# RUN APPLICATION
+# START APPLICATION
 # ============================================================
 
 if __name__ == "__main__":
@@ -595,8 +1244,13 @@ if __name__ == "__main__":
         )
     )
 
+
     app.run(
+
         host="0.0.0.0",
+
         port=port,
+
         debug=False
+
     )
