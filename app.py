@@ -9,7 +9,7 @@ app = Flask(__name__)
 # LOAD MODEL
 # ============================================================
 
-MODEL_PATH = "model.pkl"
+MODEL_PATH = "Model.pkl"
 
 try:
     with open(MODEL_PATH, "rb") as file:
